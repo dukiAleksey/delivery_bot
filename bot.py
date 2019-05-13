@@ -141,12 +141,14 @@ def show_product(update, context):
         context.user_data.update(
             product=product
             )
-        desc = f'{product.composition}\n'\
-               f'{product.price} {config.text["currency"]}\n'\
+        desc = f'*{product.title}*\n\n'\
+               f'{product.composition}\n'\
+               f'{product.price} {config.text["currency"]}\n\n'\
                f'Выберите количество'
         update.message.reply_photo(
-            photo=product.image_url,
+            photo=open(utils.get_image_path(product.image_url), 'rb'),
             caption=desc,
+            parse_mode=ParseMode.MARKDOWN,
             reply_markup=utils.get_quontity_kb()
         )
         return TYPING_QUONTITY

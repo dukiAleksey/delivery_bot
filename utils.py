@@ -331,4 +331,12 @@ def get_ok_ko_markup():
     ok_ko_markup = InlineKeyboardMarkup(ok_ko_markup)
     return ok_ko_markup
 
+
+def get_image_path(filename):
+    from pathlib import Path
+    data_folder = Path('resources/menu')
+    file_to_open = data_folder / filename
+    return str(file_to_open.resolve())
+
+
 # ===============================  Helpers ===============================
