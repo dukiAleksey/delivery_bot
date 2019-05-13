@@ -35,7 +35,7 @@ def start(update, context):
             f"Давайте пройдем быструю регистрацию.\n"
             f"Как Вас зовут? (в формате ФИО)"
         )
-        return INITIAL
+        return NAME
     else:
         update.message.reply_text(
             config.text['select_menu'],
@@ -94,15 +94,19 @@ def user_birthday_handler(update, context):
     date_of_birth = update.message.text
     try:
         date_of_birth = datetime.strptime(date_of_birth, '%d.%m.%Y')
+        db.update_user(user['id'], 'date_of_birth', date_of_birth)
+        update.message.reply_text(
+            config.text['select_menu'],
+            reply_markup=utils.get_start_kb()
+        )
+        return CHOOSING_CATEGORY
+
     except Exception as ex:
         logger.warning(ex)
-    db.update_user(user['id'], 'date_of_birth', date_of_birth)
-    update.message.reply_text(
-        "Чем могу помочь?",
-        reply_markup=utils.get_start_kb()
-    )
-
-    return CHOOSING_CATEGORY
+        update.message.reply_text(
+            'Введите в формате дд.мм.гггг:'
+        )
+        return BIRTHDAY
 
 
 def select_category(update, context):

@@ -380,6 +380,6 @@ product_list = (
 
 
 # categories = get_categories()
-add_products(product_list)
+# add_products(product_list)
 
 # ============================  Usage =============================

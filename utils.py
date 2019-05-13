@@ -79,6 +79,7 @@ def get_products_keyboard(category=None):
 def get_categories_keyboard(category=None):
     cats = db.get_subcategories(category)
     cats_kb = list(group(cats))
+    cats_kb.append([config.text['back']])
     return cats_kb
 
 
@@ -180,7 +181,8 @@ def is_category(str):
 def has_subcategory(category):
     # TODO get category and check for inner categories...
     cats = db.get_subcategories(category)
-    if cats[0] is not None:
+    cats = [x for x in cats if x is not None]  # removing [None] in list
+    if cats:
         return True
     else:
         False
