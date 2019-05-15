@@ -41,7 +41,6 @@ def start(update, context):
             config.text['select_menu'],
             reply_markup=utils.get_start_kb()
             )
-    context.user_data.clear()
 
     return CHOOSING_CATEGORY
 
@@ -331,7 +330,7 @@ def done(update, context):
 
     # user_data.clear()
     # return ConversationHandler.END
-    return INITIAL
+    return CHOOSING_CATEGORY
 
 
 def error(update, context):
