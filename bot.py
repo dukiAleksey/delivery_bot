@@ -82,7 +82,8 @@ def user_phone_handler(update, context):
 
     update.message.reply_text(
         f"🎂 {name}, когда Вас поздравить с днем рождения?\n"
-        f"Введите в формате дд.мм.гггг:"
+        f"Введите в формате дд.мм.гггг:",
+        reply_markup=utils.get_skip_kb()
     )
     return BIRTHDAY
 
@@ -233,7 +234,6 @@ def order_confirmation_handler(update, context):
         parse_mode=ParseMode.MARKDOWN,
         reply_markup=utils.get_confirm_order_kb()
     )
-    return ORDERING
 
 
 def location_handler(update, context):
@@ -295,7 +295,10 @@ def order_confirm_handler(update, context):
                 chat_id=message.chat_id,
                 message_id=message.message_id
                 )
-    message.reply_text(config.text['thank_you'])
+    message.reply_text(
+        config.text['thank_you'],
+        reply_markup=utils.get_start_kb()
+        )
     utils.send_message_to_admin(
         context.bot,
         f"Заказ {context.user_data['order_id']} *подтвержден*")
@@ -304,6 +307,8 @@ def order_confirm_handler(update, context):
         'confirmed'
     )
     context.user_data.clear()
+
+    return CHOOSING_CATEGORY
 
 
 def order_cancel_handler(update, context):
@@ -328,8 +333,6 @@ def order_cancel_handler(update, context):
 def done(update, context):
     user_data = context.user_data
 
-    # user_data.clear()
-    # return ConversationHandler.END
     return CHOOSING_CATEGORY
 
 
@@ -360,7 +363,12 @@ def main():
                 ],
             NAME: [MessageHandler(Filters.text, user_name_handler)],
             PHONE: [MessageHandler(Filters.text, user_phone_handler)],
-            BIRTHDAY: [MessageHandler(Filters.text, user_birthday_handler)],
+            BIRTHDAY: [
+                MessageHandler(
+                    Filters.regex(config.text['skip']), start),
+                MessageHandler(
+                    Filters.text, user_birthday_handler)
+                ],
             CHOOSING_CATEGORY: [
                 MessageHandler(
                     Filters.regex(config.text['back']), start),
