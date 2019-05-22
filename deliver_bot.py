@@ -11,7 +11,7 @@ from telegram.ext import (Updater, CommandHandler, MessageHandler,
 
 # Enable logging
 logging.basicConfig(
-    filename='bot.log',
+    filename='deliver_bot.log',
     filemode='a+',
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO)
@@ -25,6 +25,8 @@ def start(update, context):
     chat = utils.get_chat(context, update)
     chat_id = chat.effective_chat.id
     user = update.message.from_user
+
+    logger.info(f'start -> {chat_id}')
 
     if utils.is_new_user(user.id):
         db.add_user(user)
@@ -336,7 +338,7 @@ def get_logs_handler(update, context):
     bot = utils.get_bot(context, update)
     if utils.is_admin(chat_id):
         try:
-            f = open('bot.log', 'rb')
+            f = open('deliver_bot.log', 'rb')
             bot.send_document(
                 chat_id=chat_id,
                 document=f
