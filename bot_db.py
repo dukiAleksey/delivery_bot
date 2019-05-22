@@ -49,7 +49,8 @@ class Order(Base):
 
     id = Column(Integer, primary_key=True)
     # user = relationship("User", secondary=users_orders_association)
-    user = Column(String)
+    user_id = Column(String)
+    phone = Column(String)
     cart = Column(String)
     date = Column(Date)
     address = Column(String)
@@ -240,7 +241,8 @@ def add_products(product_list):
 
 def add_order(order):
     order = Order(
-        user=order['user_id'],
+        user_id=order['user_id'],
+        phone=order['user_phone'],
         cart=order['cart'],
         date=datetime.now(),
         address=order['address'],

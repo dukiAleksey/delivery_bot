@@ -254,9 +254,10 @@ def add_order(data, chat_id):
     price = calculate_cart_price(data['cart']) + calculate_delivery_price(
         calculate_cart_price(data['cart'])
     )
+    user = db.get_user(chat_id)
     order_data = {}
     order_data['user_id'] = chat_id
-    # order_data['cart'] = data['cart']
+    order_data['user_phone'] = user.phone
     order_data['delivery_type'] = data['delivery_type']
     order_data['address'] = data['address'] if 'address' in data else None
     order_data['payment_type'] = data['payment_type']
