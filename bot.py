@@ -330,6 +330,54 @@ def order_cancel_handler(update, context):
     context.user_data.clear()
 
 
+def get_logs_handler(update, context):
+    chat = utils.get_chat(context, update)
+    chat_id = chat.effective_chat.id
+    bot = utils.get_bot(context, update)
+    if utils.is_admin(chat_id):
+        try:
+            f = open('bot.log', 'rb')
+            bot.send_document(
+                chat_id=chat_id,
+                document=f
+            )
+        except Exception:
+            pass
+
+
+def get_db_handler(update, context):
+    chat = utils.get_chat(context, update)
+    chat_id = chat.effective_chat.id
+    bot = utils.get_bot(context, update)
+    if utils.is_admin(chat_id):
+        try:
+            f = open('db.sqlite', 'rb')
+            bot.send_document(
+                chat_id=chat_id,
+                document=f
+            )
+        except Exception:
+            pass
+
+
+def get_report_handler(update, context):
+    chat = utils.get_chat(context, update)
+    chat_id = chat.effective_chat.id
+    bot = utils.get_bot(context, update)
+
+    db.export_orders_to_file()
+
+    if utils.is_admin(chat_id):
+        try:
+            f = open('orders.csv', 'rb')
+            bot.send_document(
+                chat_id=chat_id,
+                document=f
+            )
+        except Exception:
+            pass
+
+
 def done(update, context):
     user_data = context.user_data
 
@@ -459,6 +507,9 @@ def main():
 
     dp.add_handler(conv_handler)
     dp.add_handler(CommandHandler('start', start))
+    dp.add_handler(CommandHandler('getlogs', get_logs_handler))
+    dp.add_handler(CommandHandler('getdb', get_db_handler))
+    dp.add_handler(CommandHandler('getreport', get_report_handler))
 
     # log all errors
     dp.add_error_handler(error)

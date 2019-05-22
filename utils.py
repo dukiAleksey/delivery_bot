@@ -348,4 +348,11 @@ def get_image_path(filename):
     return str(file_to_open.resolve())
 
 
+def is_admin(user_id):
+    if int(user_id) in config.admins:
+        return True
+    else:
+        return False
+
+
 # ===============================  Helpers ===============================

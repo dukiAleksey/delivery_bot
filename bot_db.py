@@ -1,3 +1,5 @@
+import csv
+
 from datetime import date
 from datetime import datetime
 from sqlalchemy import create_engine, func, or_, and_
@@ -166,6 +168,14 @@ def _create_session():
 
 
 session = _create_session()
+
+
+def export_orders_to_file():
+    outfile = open('orders.csv', 'w')
+    outcsv = csv.writer(outfile)
+    records = session.query(Order).all()
+    [outcsv.writerow([getattr(curr, column.name) for column in Order.__mapper__.columns]) for curr in records]
+    outfile.close()
 
 
 def get_categories():
