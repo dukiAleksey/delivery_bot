@@ -373,21 +373,21 @@ product_list = (
     ('Наггетсы большие', 'Закуски', None, 5.00, 150, 'наггетсы', 'snacks_naggetsy.jpg'),
     ('Наггетсы малые', 'Закуски', None, 4.00, 100, 'наггетсы', 'snacks_naggetsy.jpg'),
 
-    ('Квас ж/б 0,5', 'Напитки', None, 1.50, 500, None, 'https://picsum.photos/200/300/?random'),
-    ('Квас 0,5', 'Напитки', None, 1.50, 500, None, 'https://picsum.photos/200/300/?random'),
-    ('Pepsi 0,5', 'Напитки', None, 1.50, 500, None, 'https://picsum.photos/200/300/?random'),
-    ('Mirinda 0,5', 'Напитки', None, 1.50, 500, None, 'https://picsum.photos/200/300/?random'),
-    ('7up 0,5', 'Напитки', None, 1.50, 500, None, 'https://picsum.photos/200/300/?random'),
-    ('Pepsi 0,33', 'Напитки', None, 1.30, 330, None, 'https://picsum.photos/200/300/?random'),
-    ('Mirinda 0,33', 'Напитки', None, 1.30, 330, None, 'https://picsum.photos/200/300/?random'),
-    ('7up 0,33', 'Напитки', None, 1.30, 330, None, 'https://picsum.photos/200/300/?random'),
-    ('Pepsi 0,25', 'Напитки', None, 1.30, 250, None, 'https://picsum.photos/200/300/?random'),
-    ('Mirinda 0,25', 'Напитки', None, 1.30, 250, None, 'https://picsum.photos/200/300/?random'),
-    ('7up 0,25', 'Напитки', None, 1.30, 250, None, 'https://picsum.photos/200/300/?random'),
-    ('Сок 1л', 'Напитки', None, 3.50, 1000, None, 'https://picsum.photos/200/300/?random'),
-    ('Сок 0,2л', 'Напитки', None, 1.50, 200, None, 'https://picsum.photos/200/300/?random'),
-    ('Молочные коктейли', 'Напитки', None, 2.80, 200, None, 'https://picsum.photos/200/300/?random'),
-    ('Чай и кофе', 'Напитки', None, 2.00, 200, None, 'https://picsum.photos/200/300/?random')
+    ('Квас ж/б 0,5', 'Напитки', None, 1.50, 500, None, 'pepsicola.jpg'),
+    ('Квас 0,5', 'Напитки', None, 1.50, 500, None, 'pepsicola.jpg'),
+    ('Pepsi 0,5', 'Напитки', None, 1.50, 500, None, 'pepsicola.jpg'),
+    ('Mirinda 0,5', 'Напитки', None, 1.50, 500, None, 'pepsicola.jpg'),
+    ('7up 0,5', 'Напитки', None, 1.50, 500, None, 'pepsicola.jpg'),
+    ('Pepsi 0,33', 'Напитки', None, 1.30, 330, None, 'pepsicola.jpg'),
+    ('Mirinda 0,33', 'Напитки', None, 1.30, 330, None, 'pepsicola.jpg'),
+    ('7up 0,33', 'Напитки', None, 1.30, 330, None, 'pepsicola.jpg'),
+    ('Pepsi 0,25', 'Напитки', None, 1.30, 250, None, 'pepsicola.jpg'),
+    ('Mirinda 0,25', 'Напитки', None, 1.30, 250, None, 'pepsicola.jpg'),
+    ('7up 0,25', 'Напитки', None, 1.30, 250, None, 'pepsicola.jpg'),
+    ('Сок 1л', 'Напитки', None, 3.50, 1000, None, 'pepsicola.jpg'),
+    ('Сок 0,2л', 'Напитки', None, 1.50, 200, None, 'pepsicola.jpg'),
+    ('Молочные коктейли', 'Напитки', None, 2.80, 200, None, 'coctail.jpg'),
+    ('Чай и кофе', 'Напитки', None, 2.00, 200, None, 'tea_coffee.jpg')
 )
 
 
