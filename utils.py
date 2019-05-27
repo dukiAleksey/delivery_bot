@@ -294,7 +294,7 @@ def generate_full_order_info(user_data, user_id):
 
 
 def generate_order_confirmation(data):
-    text = f'Ваш заказ #47014 передан на обработку.\n' \
+    text = f'Ваш заказ #{data["order_id"]} передан на обработку.\n' \
            f'Сейчас Вам вышлют препологаемое время доставки.'
     return text
 
