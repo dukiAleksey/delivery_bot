@@ -29,6 +29,7 @@ def start(update, context):
     logger.info(f'start -> {chat_id}')
 
     if utils.is_new_user(user.id):
+        logger.info(f'start New User: {chat_id}')
         db.add_user(user)
         update.message.reply_text(
             f"Добрый день!\n"
@@ -231,6 +232,7 @@ def order_confirmation_handler(update, context):
     chat = utils.get_chat(context, update)
     chat_id = chat.effective_chat.id
     context.user_data.update(payment_type=update.message.text)
+    logger.info(f'order_confirmation_handler -> {context.user_data}')
     update.message.reply_text(
         utils.generate_full_order_info(context.user_data, chat_id),
         parse_mode=ParseMode.MARKDOWN,
@@ -260,6 +262,7 @@ def cancel_order_handler(update, context):
 def submit_order_handler(update, context):
     chat = utils.get_chat(context, update)
     chat_id = chat.effective_chat.id
+    logger.info(f'submit_order_handler -> {context.user_data}')
     order_id = utils.add_order(context.user_data, chat_id)
     context.user_data.update(
         order_id=order_id)
@@ -336,6 +339,7 @@ def get_logs_handler(update, context):
     chat = utils.get_chat(context, update)
     chat_id = chat.effective_chat.id
     bot = utils.get_bot(context, update)
+    logger.info(f'get_logs_handler -> {chat_id}')
     if utils.is_admin(chat_id):
         try:
             f = open('deliver_bot.log', 'rb')
@@ -351,6 +355,7 @@ def get_db_handler(update, context):
     chat = utils.get_chat(context, update)
     chat_id = chat.effective_chat.id
     bot = utils.get_bot(context, update)
+    logger.info(f'get_db_handler -> {chat_id}')
     if utils.is_admin(chat_id):
         try:
             f = open('db.sqlite', 'rb')
@@ -366,6 +371,7 @@ def get_report_handler(update, context):
     chat = utils.get_chat(context, update)
     chat_id = chat.effective_chat.id
     bot = utils.get_bot(context, update)
+    logger.info(f'get_report_handler -> {chat_id}')
 
     db.export_orders_to_file()
 
