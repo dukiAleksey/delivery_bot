@@ -269,11 +269,13 @@ def submit_order_handler(update, context):
     order_id = utils.add_order(context.user_data, chat_id)
     context.user_data.update(
         order_id=order_id)
+    # 1. Send Order Info to admins chat
     utils.send_message_to_admin(
         context.bot,
         utils.generate_full_order_info(context.user_data, chat_id),
         True,
         chat_id)
+    # 2. Send notification to user
     update.message.reply_text(
         utils.generate_order_confirmation(
             context.user_data
@@ -284,15 +286,19 @@ def submit_order_handler(update, context):
 
 
 def delivery_time_handler(update, context):
-    chat = utils.get_chat(context, update)
-    chat_id = chat.effective_chat.id
-    context.bot.send_message(
-        chat_id=utils.get_user_id_from_callback(chat.callback_query.data),
-        text=f'Ваш заказ будет доставлен в течении ' \
-             f'{utils.get_delivery_time_from_callback(chat.callback_query.data)} ' \
-             f'минут',
-        reply_markup=utils.get_ok_ko_markup()
-    )
+    try:
+        logger.info(f'delivery_time_handler: {update, context}')
+        chat = utils.get_chat(context, update)
+        chat_id = chat.effective_chat.id
+        context.bot.send_message(
+            chat_id=utils.get_user_id_from_callback(chat.callback_query.data),
+            text=f'Ваш заказ будет доставлен в течении ' \
+                 f'{utils.get_delivery_time_from_callback(chat.callback_query.data)} ' \
+                 f'минут',
+            reply_markup=utils.get_ok_ko_markup()
+        )
+    except Exception as ex:
+        logger.warning(f'delivery_time_handler: {ex}')
 
 
 def order_confirm_handler(update, context):
