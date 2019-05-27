@@ -1,13 +1,16 @@
+import bot_db as db
 import config
 import logging
 import utils
-import bot_db as db
+import os
+import sys
 
 from datetime import datetime
 from telegram import ReplyKeyboardMarkup, ParseMode
 from telegram.ext import (Updater, CommandHandler, MessageHandler,
                           CallbackQueryHandler, Filters,
                           RegexHandler, ConversationHandler, PicklePersistence)
+from threading import Thread
 
 # Enable logging
 logging.basicConfig(
@@ -513,11 +516,26 @@ def main():
         allow_reentry=True
     )
 
+    def stop_and_restart():
+        """
+        Gracefully stop the Updater
+        and replace the current process with a new one
+        """
+        logging.info('stop_and_restart function fired')
+        updater.stop()
+        os.execl(sys.executable, sys.executable, *sys.argv)
+
+    def restart(update, context):
+        update.message.reply_text('Bot is restarting...')
+        Thread(target=stop_and_restart).start()
+
     dp.add_handler(conv_handler)
     dp.add_handler(CommandHandler('start', start))
     dp.add_handler(CommandHandler('getlogs', get_logs_handler))
     dp.add_handler(CommandHandler('getdb', get_db_handler))
     dp.add_handler(CommandHandler('getreport', get_report_handler))
+    dp.add_handler(CommandHandler(
+        'r', restart, filters=Filters.user(config.admins)))
 
     # log all errors
     dp.add_error_handler(error)
