@@ -307,7 +307,10 @@ def generate_time_suggest_reply_keyb(chat_id):
     keyb_time_suggestion = [
             [InlineKeyboardButton("30 минут", callback_data=f'delivery_time_30_{chat_id}'),
              InlineKeyboardButton("45 минут", callback_data=f'delivery_time_45_{chat_id}'),
-             InlineKeyboardButton("60 минут", callback_data=f'delivery_time_60_{chat_id}')]
+             InlineKeyboardButton("60 минут", callback_data=f'delivery_time_60_{chat_id}')],
+            [InlineKeyboardButton("90 минут", callback_data=f'delivery_time_90_{chat_id}'),
+             InlineKeyboardButton("120 минут", callback_data=f'delivery_time_120_{chat_id}'),
+             InlineKeyboardButton("150 минут", callback_data=f'delivery_time_150_{chat_id}')]
         ]
     return keyb_time_suggestion
 
