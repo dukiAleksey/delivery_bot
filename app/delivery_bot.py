@@ -455,6 +455,7 @@ def reply_all_handler(update, context):
         users = db.get_all_users()
         for user in users:
             try:
+                logger.info(f'reply_all_handler -> {user}')
                 context.bot.send_message(
                     chat_id=user.user_id,
                     text=update.message.text_markdown.replace(f'/replyall', ''),
@@ -462,7 +463,7 @@ def reply_all_handler(update, context):
                     disable_web_page_preview=True
                 )
             except Exception as ex:
-                logger.warning(f'{ex}')
+                logger.warning(f'reply_all_handler -> {ex}')
                 pass
 
 
