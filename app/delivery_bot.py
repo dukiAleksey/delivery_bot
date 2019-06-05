@@ -163,15 +163,15 @@ def select_category(update, context):
     try:
         if utils.has_subcategory(user_data['category']):
             update.message.reply_text(
-                f'Это подкатегория!\n'
-                f'Выбери тип',
-                reply_markup=utils.get_categories_kb(user_data['category'])
+                f'*Выберите порцию*',
+                reply_markup=utils.get_categories_kb(user_data['category']),
+                parse_mode=ParseMode.MARKDOWN
             )
             return CHOOSING_CATEGORY
         else:
             update.message.reply_text(
-                f'{update.message.text}\n'
-                f'Выбери блюдо',
+                f'{update.message.text}\n\n'
+                f'*Выберите блюдо*',
                 reply_markup=utils.get_products_kb(user_data['category'])
             )
             return CHOOSING_PRODUCT
@@ -187,9 +187,9 @@ def show_product(update, context):
             product=product
             )
         desc = f'*{product.title}*\n\n'\
-               f'{product.composition}\n'\
-               f'{product.price} {config.text["currency"]}\n\n'\
-               f'Выберите количество'
+               f'{product.composition}\n\n'\
+               f'Цена: {product.price} {config.text["currency"]}\n\n'\
+               f'*Выберите* или *введите* количество:'
         update.message.reply_photo(
             photo=open(utils.get_image_path(product.img_path), 'rb'),
             caption=desc,
