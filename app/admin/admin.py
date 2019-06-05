@@ -593,4 +593,4 @@ if __name__ == '__main__':
         add_products(product_list)
 
     # Start app
-    app.run(debug=True)
+    app.run(port=5001)
