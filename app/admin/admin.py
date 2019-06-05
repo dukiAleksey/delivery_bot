@@ -78,7 +78,7 @@ class User(db.Model, UserMixin):
                             backref=db.backref('users', lazy='dynamic'))
 
     def __str__(self):
-        return "{}, {}".format(self.last_name, self.first_name)
+        return "{}, {}".format(self.user_id, self.username)
 
     def __repr__(self):
         return "{}: {}".format(self.id, self.__str__())
@@ -355,6 +355,11 @@ def get_products_by_category(category):
 def get_user(user_id):
     user = db.session.query(User).filter(User.user_id == user_id).first()
     return user
+
+
+def get_all_users():
+    users = db.session.query(User).all()
+    return users
 
 
 def add_user(user):

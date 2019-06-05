@@ -4,6 +4,8 @@ import logging
 import re
 import utils
 import os
+import pickle
+import telegram.bot
 import sys
 
 from datetime import datetime
@@ -11,6 +13,7 @@ from telegram import ReplyKeyboardMarkup, ParseMode, InlineKeyboardMarkup
 from telegram.ext import (Updater, CommandHandler, MessageHandler,
                           CallbackQueryHandler, Filters,
                           RegexHandler, ConversationHandler, PicklePersistence)
+from telegram.ext import messagequeue as mq
 from threading import Thread
 
 import config
@@ -26,6 +29,28 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 INITIAL, NAME, PHONE, BIRTHDAY, CHOOSING_CATEGORY, CHOOSING_SUBCATEGORY, CHOOSING_PRODUCT, TYPING_QUONTITY, EDITING_CART, ORDERING, CHOOSING_PAYMENT = range(11)
+
+
+class MQBot(telegram.bot.Bot):
+    '''A subclass of Bot which delegates send method handling to MQ'''
+    def __init__(self, *args, is_queued_def=True, mqueue=None, **kwargs):
+        super(MQBot, self).__init__(*args, **kwargs)
+        # below 2 attributes should be provided for decorator usage
+        self._is_messages_queued_default = is_queued_def
+        self._msg_queue = mqueue or mq.MessageQueue()
+
+    def __del__(self):
+        try:
+            self._msg_queue.stop()
+        except:
+            pass
+        super(MQBot, self).__del__()
+
+    @mq.queuedmessage
+    def send_message(self, *args, **kwargs):
+        '''Wrapped method would accept new `queued` and `isgroup`
+        OPTIONAL arguments'''
+        return super(MQBot, self).send_message(*args, **kwargs)
 
 
 def start(update, context):
@@ -424,6 +449,23 @@ def get_report_handler(update, context):
             pass
 
 
+def reply_all_handler(update, context):
+    if utils.is_admin(update.message.chat_id):
+        logger.info(f'reply_all_handler -> text: {update.message.text}')
+        users = db.get_all_users()
+        for user in users:
+            try:
+                context.bot.send_message(
+                    chat_id=user.user_id,
+                    text=update.message.text_markdown.replace(f'/replyall', ''),
+                    parse_mode=ParseMode.MARKDOWN,
+                    disable_web_page_preview=True
+                )
+            except Exception as ex:
+                logger.warning(f'{ex}')
+                pass
+
+
 def done(update, context):
     user_data = context.user_data
 
@@ -436,9 +478,12 @@ def error(update, context):
 
 
 def main():
+    q = mq.MessageQueue(all_burst_limit=29, all_time_limit_ms=1017)
+    # set connection pool size for bot
+    delivery_bot = MQBot(config.BOT_TOKEN, mqueue=q)
     persistence = PicklePersistence(filename='conversation')
     updater = Updater(
-        config.BOT_TOKEN,
+        bot=delivery_bot,
         persistence=persistence,
         use_context=True)
 
@@ -571,6 +616,7 @@ def main():
     dp.add_handler(CommandHandler('getreport', get_report_handler))
     dp.add_handler(CommandHandler(
         'r', restart, filters=Filters.user(config.admins)))
+    dp.add_handler(CommandHandler('replyall', reply_all_handler))
 
     # log all errors
     dp.add_error_handler(error)
