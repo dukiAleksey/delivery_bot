@@ -2,5 +2,6 @@ config*
 .vscode
 .pytest_cache
 __pycache__
+uploads
 *.log
 *conversation*

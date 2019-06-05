@@ -1,20 +1,24 @@
-import bot_db as db
-import config
+#!/usr/bin/env python3
+
 import logging
+import re
 import utils
 import os
 import sys
 
 from datetime import datetime
-from telegram import ReplyKeyboardMarkup, ParseMode
+from telegram import ReplyKeyboardMarkup, ParseMode, InlineKeyboardMarkup
 from telegram.ext import (Updater, CommandHandler, MessageHandler,
                           CallbackQueryHandler, Filters,
                           RegexHandler, ConversationHandler, PicklePersistence)
 from threading import Thread
 
+import config
+from admin import admin as db
+
 # Enable logging
 logging.basicConfig(
-    filename='deliver_bot.log',
+    filename='delivery_bot.log',
     filemode='a+',
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO)
@@ -79,19 +83,29 @@ def user_name_handler(update, context):
 
 
 def user_phone_handler(update, context):
-    # TODO add phone number validation
-    # +998 66 123 1234
-    phone = update.message.text
-    user = update.message.from_user
-    name = db.get_user(user['id']).first_name
-    db.update_user(user['id'], 'phone', phone)
+    try:
+        text = update.message.text
+        phone_res = re.match("(^(8|\+3|37)\d+(?:[ ]\d+)*)", text)
+        if phone_res:
+            phone = phone_res.group()
+            user = update.message.from_user
+            db.update_user(user['id'], 'phone', phone)
+            name = db.get_user(user['id']).first_name
 
-    update.message.reply_text(
-        f"🎂 {name}, когда Вас поздравить с днем рождения?\n"
-        f"Введите в формате дд.мм.гггг:",
-        reply_markup=utils.get_skip_kb()
-    )
-    return BIRTHDAY
+            update.message.reply_text(
+                f"🎂 {name}, когда Вас поздравить с днем рождения?\n"
+                f"Введите в формате дд.мм.гггг:",
+                reply_markup=utils.get_skip_kb()
+            )
+            return BIRTHDAY
+        else:
+            update.message.reply_text(
+                f"Отправьте или введите ваш номер телефона: +375 ** *** ****"
+            )
+            return PHONE
+
+    except Exception as ex:
+        logger.warning(ex)
 
 
 def user_birthday_handler(update, context):
@@ -152,7 +166,7 @@ def show_product(update, context):
                f'{product.price} {config.text["currency"]}\n\n'\
                f'Выберите количество'
         update.message.reply_photo(
-            photo=open(utils.get_image_path(product.image_url), 'rb'),
+            photo=open(utils.get_image_path(product.img_path), 'rb'),
             caption=desc,
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=utils.get_quontity_kb()
@@ -272,7 +286,9 @@ def submit_order_handler(update, context):
     # 1. Send Order Info to admins chat
     utils.send_message_to_admin(
         context.bot,
-        utils.generate_full_order_info(context.user_data, chat_id),
+        f'{utils.generate_full_order_info(context.user_data, chat_id)} \n\n'
+        f'`User_id: {chat_id}` \n'
+        f'`Order_id: {order_id}` \n',
         True,
         chat_id)
     # 2. Send notification to user
@@ -289,11 +305,23 @@ def delivery_time_handler(update, context):
     try:
         logger.info(f'delivery_time_handler: {update, context}')
         chat = utils.get_chat(context, update)
+        message = utils.get_message(context, update)
         chat_id = chat.effective_chat.id
+
+        context.bot.editMessageReplyMarkup(
+            chat_id=message.chat_id,
+            message_id=message.message_id,
+            reply_markup=InlineKeyboardMarkup(
+                utils.generate_time_suggest_reply_keyb(
+                    chat_id,
+                    utils.get_delivery_time_from_callback(chat.callback_query.data)
+                )),
+            parse_mode=ParseMode.MARKDOWN
+        )
         context.bot.send_message(
             chat_id=utils.get_user_id_from_callback(chat.callback_query.data),
-            text=f'Ваш заказ будет доставлен в течении ' \
-                 f'{utils.get_delivery_time_from_callback(chat.callback_query.data)} ' \
+            text=f'Ваш заказ будет доставлен в течении '
+                 f'{utils.get_delivery_time_from_callback(chat.callback_query.data)} '
                  f'минут',
             reply_markup=utils.get_ok_ko_markup()
         )
@@ -342,6 +370,7 @@ def order_cancel_handler(update, context):
         'cancelled'
     )
     context.user_data.clear()
+    return CHOOSING_CATEGORY
 
 
 def get_logs_handler(update, context):

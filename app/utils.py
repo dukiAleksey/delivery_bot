@@ -1,4 +1,4 @@
-import bot_db as db
+from admin import admin as db
 import config
 
 from telegram import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, ParseMode
@@ -104,7 +104,7 @@ def get_order_type_keyboard():
 def get_delivery_keyboard():
     delivery_kb = [
         # [KeyboardButton(config.text['my_location'], request_location=True)],
-                   [config.text['back'], config.text['menu']]]
+        [config.text['back'], config.text['menu']]]
     return delivery_kb
 
 
@@ -199,7 +199,7 @@ def has_subcategory(category):
 
 def calculate_cart_price(cart):
     total = [item['price'] * item['quontity'] for item in cart]
-    return sum(total)
+    return round(sum(total), 2)
 
 
 def calculate_delivery_price(order_price):
@@ -224,11 +224,11 @@ def generate_cart_reply_text(data):
     for item in data['cart']:
         # f'I am {num:{".2f" if ppl else ""}}'
         cart_text += f'\n*{item["title"]}* {item["subcategory"] if item["subcategory"] else ""}\n' \
-                     f'{item["quontity"]} x {item["price"]} = {item["quontity"] * item["price"]} ' \
+                     f'{item["quontity"]} x {item["price"]} = {round(item["quontity"] * item["price"], 2)} ' \
                      f'{config.text["currency"]}\n'
 
     try:
-        if data['delivery_type'] is not None:
+        if data['delivery_type'] == config.text['delivery']:
             delivery_price = calculate_delivery_price(cart_price)
             cart_text += f'\n*Доставка* {delivery_price} {config.text["currency"]}\n'
     except KeyError:
@@ -303,14 +303,15 @@ def update_order_status(order_id, status):
     db.update_order(order_id, 'status', status)
 
 
-def generate_time_suggest_reply_keyb(chat_id):
+def generate_time_suggest_reply_keyb(chat_id, checked_time=None):
+    # TODO rewrite logic
     keyb_time_suggestion = [
-            [InlineKeyboardButton("30 минут", callback_data=f'delivery_time_30_{chat_id}'),
-             InlineKeyboardButton("45 минут", callback_data=f'delivery_time_45_{chat_id}'),
-             InlineKeyboardButton("60 минут", callback_data=f'delivery_time_60_{chat_id}')],
-            [InlineKeyboardButton("90 минут", callback_data=f'delivery_time_90_{chat_id}'),
-             InlineKeyboardButton("120 минут", callback_data=f'delivery_time_120_{chat_id}'),
-             InlineKeyboardButton("150 минут", callback_data=f'delivery_time_150_{chat_id}')]
+            [InlineKeyboardButton("30 мин" if checked_time != '30' else "✅ 30 мин", callback_data=f'delivery_time_30_{chat_id}'),
+             InlineKeyboardButton("45 мин" if checked_time != '45' else "✅ 45 мин", callback_data=f'delivery_time_45_{chat_id}'),
+             InlineKeyboardButton("60 мин" if checked_time != '60' else "✅ 60 мин", callback_data=f'delivery_time_60_{chat_id}')],
+            [InlineKeyboardButton("90 мин" if checked_time != '90' else "✅ 90 мин", callback_data=f'delivery_time_90_{chat_id}'),
+             InlineKeyboardButton("120 мин" if checked_time != '120' else "✅ 120 мин", callback_data=f'delivery_time_120_{chat_id}'),
+             InlineKeyboardButton("150 мин" if checked_time != '150' else "✅ 150 мин", callback_data=f'delivery_time_150_{chat_id}')]
         ]
     return keyb_time_suggestion
 
@@ -347,7 +348,7 @@ def get_ok_ko_markup():
 
 def get_image_path(filename):
     from pathlib import Path
-    data_folder = Path('resources/menu')
+    data_folder = Path('uploads')
     file_to_open = data_folder / filename
     return str(file_to_open.resolve())
 

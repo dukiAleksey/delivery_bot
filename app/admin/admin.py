@@ -1,150 +1,310 @@
+#!/usr/bin/env python3
+
 import csv
+import os
+import os.path as op
 
 from datetime import date
 from datetime import datetime
 from sqlalchemy import create_engine, func, or_, and_
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, relationship, scoped_session
-from sqlalchemy import Table, Column, String, Integer, Date, MetaData, ForeignKey, Float
+from sqlalchemy.event import listens_for
+from jinja2 import Markup
 
-engine = create_engine(
-    'sqlite:///db.sqlite',
-    connect_args={'check_same_thread': False})
-# Session = sessionmaker(bind=engine)
-Session = scoped_session(sessionmaker(bind=engine))
+from flask import Flask, url_for, redirect, render_template, request, abort
+from flask_sqlalchemy import SQLAlchemy
 
-Base = declarative_base()
+import flask_admin as admin
 
+from flask_admin import form
+from flask_admin import helpers as admin_helpers
+from flask_admin.base import MenuLink
+from flask_admin.contrib import sqla
+from flask_admin.contrib.sqla import filters
+from flask_admin.contrib.sqla.form import InlineModelConverter
+from flask_admin.contrib.sqla.fields import InlineModelFormList
+from flask_admin.contrib.sqla.filters import BaseSQLAFilter, FilterEqual
 
-class User(Base):
-    __tablename__ = 'users'
-
-    id = Column(Integer, primary_key=True)
-    username = Column(String, nullable=True)
-    first_name = Column(String, nullable=True)
-    last_name = Column(String, nullable=True)
-    phone = Column(String, nullable=True)
-    date_of_birth = Column(Date, nullable=True)
-    date = Column(Date)
-
-    # def __init__(self, id, login, first_name, last_name, phone, date_of_birth, date):
-    #     self.id = id
-    #     self.login = login
-    #     self.first_name = first_name
-    #     self.last_name = last_name
-    #     self.phone = phone
-    #     self.date_of_birth = date_of_birth
-    #     self.date = date
+from flask_security import Security, SQLAlchemyUserDatastore, \
+    UserMixin, RoleMixin, login_required, current_user
+from flask_security.forms import LoginForm, RegisterForm, StringField, Required
+from flask_security.utils import encrypt_password
 
 
-users_orders_association = Table(
-    'users_orders', Base.metadata,
-    Column('user_id', Integer, ForeignKey('users.id')),
-    Column('order_id', Integer, ForeignKey('orders.id'))
+# Create application
+app = Flask(__name__, static_folder='uploads')
+app.config.from_pyfile('config.py')
+db = SQLAlchemy(app)
+
+# Create directory for file fields to use
+file_path = op.join(op.dirname(__file__), 'uploads')
+try:
+    os.mkdir(file_path)
+except OSError:
+    pass
+
+# Define models
+roles_users = db.Table(
+    'roles_users',
+    db.Column('user_id', db.Integer(), db.ForeignKey('users.id')),
+    db.Column('role_id', db.Integer(), db.ForeignKey('role.id'))
 )
 
 
-class Order(Base):
+class Role(db.Model, RoleMixin):
+    id = db.Column(db.Integer(), primary_key=True)
+    name = db.Column(db.String(80), unique=True)
+    description = db.Column(db.String(255))
+
+    def __str__(self):
+        return self.name
+
+
+class User(db.Model, UserMixin):
+    __tablename__ = 'users'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, unique=True)
+    email = db.Column(db.String, unique=True)
+    password = db.Column(db.String(255))
+    username = db.Column(db.String, nullable=True)
+    first_name = db.Column(db.String, nullable=True)
+    last_name = db.Column(db.String, nullable=True)
+    phone = db.Column(db.String, nullable=True)
+    date_of_birth = db.Column(db.Date, nullable=True)
+    date = db.Column(db.DateTime(timezone=True), server_default=func.now())
+    orders = db.relationship('Order', backref='owner')
+    active = db.Column(db.Boolean())
+    roles = db.relationship('Role', secondary=roles_users,
+                            backref=db.backref('users', lazy='dynamic'))
+
+    def __str__(self):
+        return "{}, {}".format(self.last_name, self.first_name)
+
+    def __repr__(self):
+        return "{}: {}".format(self.id, self.__str__())
+
+
+# Setup Flask-Security
+user_datastore = SQLAlchemyUserDatastore(db, User, Role)
+security = Security(app, user_datastore)
+
+
+class Order(db.Model):
     __tablename__ = 'orders'
 
-    id = Column(Integer, primary_key=True)
-    # user = relationship("User", secondary=users_orders_association)
-    user_id = Column(String)
-    phone = Column(String)
-    cart = Column(String)
-    date = Column(Date)
-    address = Column(String)
-    payment_type = Column(String)
-    status = Column(String)
-    price = Column(Float)
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey(User.user_id))
+    phone = db.Column(db.String)
+    cart = db.Column(db.String)
+    date = db.Column(db.DateTime(timezone=True), server_default=func.now())
+    address = db.Column(db.String)
+    payment_type = db.Column(db.String)
+    status = db.Column(db.String)
+    price = db.Column(db.Float)
 
-    # def __init__(self, cart, date, address, payment_type, status):
-    #     self.cart = cart
-    #     self.date = date
-    #     self.address = address
-    #     self.payment_type = payment_type
-    #     self.status = status
+    def __str__(self):
+        return str(self.id)
 
 
-class Product(Base):
+class Product(db.Model):
     __tablename__ = 'products'
 
-    id = Column(Integer, primary_key=True)
-    title = Column(String)
-    category = Column(String)
-    subcategory = Column(String)
-    price = Column(Float)
-    weight = Column(String)
-    composition = Column(String)
-    image_url = Column(String)
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String)
+    category = db.Column(db.String)
+    subcategory = db.Column(db.String)
+    price = db.Column(db.Float)
+    weight = db.Column(db.String)
+    composition = db.Column(db.String)
+    img_name = db.Column(db.Unicode(64))
+    img_path = db.Column(db.Unicode(128))
 
-    # def __init__(self, title, category, subcategory, price, weight, composition, image_url):
-    #     self.title = title
-    #     self.category = category
-    #     self.subcategory = subcategory
-    #     self.price = price
-    #     self.weight = weight
-    #     self.composition = composition
-    #     self.image_url = image_url
+    def __unicode__(self):
+        return self.name
+
+
+# Delete hooks for models, delete files if models are getting deleted
+@listens_for(Product, 'after_delete')
+def del_image(mapper, connection, target):
+    if target.path:
+        # Delete image
+        try:
+            os.remove(op.join(file_path, target.path))
+        except OSError:
+            pass
+
+        # Delete thumbnail
+        try:
+            os.remove(op.join(file_path,
+                              form.thumbgen_filename(target.path)))
+        except OSError:
+            pass
+
+
+# Flask views
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+
+class UserAdmin(sqla.ModelView):
+    action_disallowed_list = ['delete', ]
+    column_display_pk = True
+    column_list = [
+        'user_id',
+        'username',
+        'first_name',
+        'phone',
+        'date_of_birth',
+        'date',
+        'orders'
+    ]
+    column_default_sort = [('last_name', False), ('first_name', False)]  # sort on multiple columns
+
+    # setup create & edit forms so that only 'available' pets can be selected
+    def create_form(self):
+        return self._use_filtered_parent(
+            super(UserAdmin, self).create_form()
+        )
+
+    def edit_form(self, obj):
+        return self._use_filtered_parent(
+            super(UserAdmin, self).edit_form(obj)
+        )
+
+    def is_accessible(self):
+        return (current_user.is_active and
+                current_user.is_authenticated and
+                current_user.has_role('superuser')
+                )
+
+    def _use_filtered_parent(self, form):
+        form.orders.query_factory = self._get_parent_list
+        return form
+
+    def _get_parent_list(self):
+        # only show available pets in the form
+        # return Order.query.filter_by(available=True).all()
+        return Order.query.all()
+
+
+class OrderAdmin(sqla.ModelView):
+    action_disallowed_list = ['delete', ]
+    column_list = [
+        'id',
+        'user_id',
+        'phone',
+        'address',
+        'date',
+        'cart',
+        'price',
+        'payment_type',
+        'status'
+    ]
+    column_display_pk = True
+    column_default_sort = [('user_id', False), ('date', False)]  # sort on multiple columns
+    can_export = True
+    export_max_rows = 1000
+    export_types = ['csv', 'xls']
+
+    def is_accessible(self):
+        return (current_user.is_active and
+                current_user.is_authenticated and
+                current_user.has_role('superuser')
+                )
+
+
+class ProductAdmin(sqla.ModelView):
+    action_disallowed_list = ['delete', ]
+    column_list = [
+        'id',
+        'title',
+        'category',
+        'subcategory',
+        'price',
+        'weight',
+        'composition',
+        'img_path'
+    ]
+    column_display_pk = True
+    can_export = True
+    export_max_rows = 1000
+    export_types = ['csv', 'xls']
+
+    def is_accessible(self):
+        return (current_user.is_active and
+                current_user.is_authenticated and
+                current_user.has_role('superuser')
+                )
+
+    def _list_thumbnail(view, context, model, name):
+        if not model.img_path:
+            return ''
+
+        return Markup('<img src="%s">' % url_for('static',
+                                                 filename=form.thumbgen_filename(model.img_path)))
+
+    column_formatters = {
+        'img_path': _list_thumbnail
+    }
+
+    # Alternative way to contribute field is to override it completely.
+    # In this case, Flask-Admin won't attempt to merge various parameters for the field.
+    form_extra_fields = {
+        'img_path': form.ImageUploadField(
+            'Image',
+            base_path=file_path,
+            thumbnail_size=(40, 40, True))
+    }
+
+
+class RoleView(sqla.ModelView):
+    def is_accessible(self):
+        return (current_user.is_active and
+                current_user.is_authenticated and
+                current_user.has_role('superuser')
+                )
+
+    def _handle_view(self, name, **kwargs):
+        """
+        Override builtin _handle_view in order to redirect users when a view is not accessible.
+        """
+        if not self.is_accessible():
+            if current_user.is_authenticated:
+                # permission denied
+                abort(403)
+            else:
+                # login
+                return redirect(url_for('security.login', next=request.url))
+
+
+# Create admin
+admin = admin.Admin(
+    app,
+    name='Tutaka',
+    base_template='my_master.html',
+    template_mode='bootstrap3'
+    )
+
+# Add views
+admin.add_view(UserAdmin(User, db.session))
+admin.add_view(OrderAdmin(Order, db.session))
+admin.add_view(ProductAdmin(Product, db.session))
+admin.add_view(RoleView(Role, db.session))
+
+
+# define a context processor for merging flask-admin's template context into the
+# flask-security views.
+@security.context_processor
+def security_context_processor():
+    return dict(
+        admin_base_template=admin.base_template,
+        admin_view=admin.index_view,
+        h=admin_helpers,
+        get_url=url_for
+    )
 
 # ===========================  DB wrapper ===========================
-# ===========================  Examples ===========================
-
-# https://auth0.com/blog/sqlalchemy-orm-tutorial-for-python-developers/#SQLAlchemy-in-Practice
-# https://www.youtube.com/watch?v=YWFqtmGK0fk
-
-# Base.metadata.create_all(engine)
-
-# session = Session()
-
-# user_1 = User(1234, 'mu_login', 'first_name', 'last-name', '', date(2019, 4, 11), date(2019, 4, 19))
-# user_2 = User(45678, 'mu_login_2', 'first_name 2', 'last-name 2', '', date(2019, 4, 12), date(2019, 4, 20))
-
-# order_1 = Order('текст корзины товаров', date(2019, 4, 18), 'Lida', 'terminal', 'status')
-# order_2 = Order('текст корзины товаров 2', date(2019, 4, 20), 'Lida 2', 'terminal 2', 'status 2')
-
-# order_1.user = [user_1]
-# order_2.user = [user_2]
-
-# session.add(user_1)
-# session.add(user_2)
-# session.add(order_1)
-# session.add(order_2)
-
-# ================
-
-# users = session.query(User).all()
-
-# for user in users:
-#     print(f'{user.id} {user.first_name} was added {user.date}')
-
-# ===============
-
-# orders that 'first_name' made
-# my_orders = session.query(Order) \
-#     .join(User, Order.user) \
-#     .filter(User.first_name == 'first_name') \
-#     .all()
-
-# for order in my_orders:
-#     print(f'{order.id} {order.address} was added {order.date}')
-
-# ==============
-
-# get orders after 15-01-01
-# orders = session.query(Order) \
-#     .filter(Order.date > date(2019, 4, 19)) \
-#     .all()
-
-# for order in orders:
-#     print(f'{order.id} {order.address} was made {order.date}')
-
-# ==============
-
-# session.commit()
-# session.close()
-
-# ===========================  Examples ===========================
 # ============================  Usage =============================
 
 # Source https://github.com/pybites/pytip/tree/master/tips
@@ -152,12 +312,6 @@ class Product(Base):
 
 def _create_session():
     db_url = 'sqlite:///db.sqlite'
-
-    # if 'pytest' in sys.argv[0]:
-    #     db_url += '_test'
-
-    # if not db_url:
-    #     raise EnvironmentError('Need to set (TEST_)DATABASE_URL')
 
     engine = create_engine(
         db_url,
@@ -168,32 +322,29 @@ def _create_session():
     return create_session()
 
 
-session = _create_session()
-
-
 def export_orders_to_file():
     outfile = open('orders.csv', 'w')
     outcsv = csv.writer(outfile)
-    records = session.query(Order).all()
+    records = db.session.query(Order).all()
     [outcsv.writerow([getattr(curr, column.name) for column in Order.__mapper__.columns]) for curr in records]
     outfile.close()
 
 
 def get_categories():
-    categories = session.query(Product.category).group_by(Product.category).all()
+    categories = db.session.query(Product.category).group_by(Product.category).all()
     categories = [r for r, in categories]
     return categories
 
 
 def get_subcategories(category):
-    subcats = session.query(Product.subcategory).filter(Product.category == category).group_by(Product.subcategory).all()
+    subcats = db.session.query(Product.subcategory).filter(Product.category == category).group_by(Product.subcategory).all()
     subcats = [r for r, in subcats]
     return subcats
 
 
 def get_products_by_category(category):
     # TODO make this function work with categories and subcategories
-    products = session.query(Product.title).filter(or_(
+    products = db.session.query(Product.title).filter(or_(
         Product.category == category,
         Product.subcategory == category
     )).all()
@@ -202,41 +353,62 @@ def get_products_by_category(category):
 
 
 def get_user(user_id):
-    user = session.query(User).filter(User.id == user_id).first()
+    user = db.session.query(User).filter(User.user_id == user_id).first()
     return user
 
 
 def add_user(user):
-    session.add(User(
-        id=user['id'],
+    db.session.add(User(
+        user_id=user['id'],
         username=user['username'],
         first_name=user['first_name'],
         last_name=user['last_name'],
         date=datetime.now()
     ))
-    session.commit()
-    session.close()
+    db.session.commit()
+    db.session.close()
 
 
 def update_user(user_id, column_name, value):
-    session.query(User).filter(User.id == user_id).update({column_name: value})
-    session.commit()
-    session.close()
+    db.session.query(User).filter(User.user_id == user_id).update({column_name: value})
+    db.session.commit()
+    db.session.close()
+
+
+def build_sample_db():
+    db.drop_all()
+    db.create_all()
+
+    with app.app_context():
+        user_role = Role(name='user')
+        super_user_role = Role(name='superuser')
+        db.session.add(user_role)
+        db.session.add(super_user_role)
+        db.session.commit()
+
+        test_user = user_datastore.create_user(
+            first_name='Admin',
+            email='admin',
+            password=encrypt_password('dukiforever'),
+            roles=[user_role, super_user_role]
+        )
+
+        db.session.commit()
 
 
 def add_products(product_list):
     for p in product_list:
-        session.add(Product(
+        db.session.add(Product(
             title=p[0],
             category=p[1],
             subcategory=p[2],
             price=p[3],
             weight=p[4],
             composition=p[5],
-            image_url=p[6]
+            img_name=p[6],
+            img_path=p[6]
             ))
-    session.commit()
-    session.close()
+    db.session.commit()
 
 
 def add_order(order):
@@ -250,23 +422,23 @@ def add_order(order):
         status=order['status'],
         price=order['price']
     )
-    session.add(order)
-    session.flush()
-    session.refresh(order)
+    db.session.add(order)
+    db.session.flush()
+    db.session.refresh(order)
     order_id = order.id
-    session.commit()
-    session.close()
+    db.session.commit()
+    db.session.close()
     return order_id
 
 
 def update_order(order_id, column_name, value):
-    session.query(Order).filter(Order.id == order_id).update({column_name: value})
-    session.commit()
-    session.close()
+    db.session.query(Order).filter(Order.id == order_id).update({column_name: value})
+    db.session.commit()
+    db.session.close()
 
 
 def is_existing_category(text):
-    cat = session.query(Product).filter(
+    cat = db.session.query(Product).filter(
         or_(
             Product.category == text,
             Product.subcategory == text
@@ -276,7 +448,7 @@ def is_existing_category(text):
 
 
 def get_product(product, category):
-    return session.query(Product).filter(and_(
+    return db.session.query(Product).filter(and_(
         Product.title == product,
         or_(
             Product.category == category,
@@ -286,7 +458,7 @@ def get_product(product, category):
 
 
 def get_product_by_id(id):
-    p = session.query(Product).filter(Product.id == id).first()
+    p = db.session.query(Product).filter(Product.id == id).first()
     p = dict(p.__dict__)
     p.pop('_sa_instance_state', None)
     return p
@@ -411,7 +583,14 @@ product_list = (
 )
 
 
-# categories = get_categories()
-# add_products(product_list)
-
 # ============================  Usage =============================
+
+if __name__ == '__main__':
+    app_dir = op.realpath(os.path.dirname(__file__))
+    database_path = op.join(app_dir, app.config['DATABASE_FILE'])
+    if not os.path.exists(database_path):
+        build_sample_db()
+        add_products(product_list)
+
+    # Start app
+    app.run(debug=True)
