@@ -41,6 +41,10 @@ def get_delivery_kb():
     return ReplyKeyboardMarkup(get_delivery_keyboard())
 
 
+def get_phone_kb():
+    return ReplyKeyboardMarkup(get_phone_keyboard())
+
+
 def get_payment_type_kb():
     return ReplyKeyboardMarkup(get_payment_type_keyboard())
 
@@ -123,6 +127,12 @@ def get_confirm_order_keyboard():
 def get_skip_keyboard():
     skip_kb = [[config.text['skip']]]
     return skip_kb
+
+
+def get_phone_keyboard():
+    phone_kb = [
+        [KeyboardButton(config.text['my_phone'], request_contact=True)]]
+    return phone_kb
 
 
 def group(lst, n=2):

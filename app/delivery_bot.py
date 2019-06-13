@@ -103,31 +103,35 @@ def user_name_handler(update, context):
     db.update_user(user['id'], 'first_name', name)
     update.message.reply_text(
             f"Какой у Вас номер {name}?\n"
-            f"Отправьте или введите ваш номер телефона: +375 ** *** ****")
+            f"Отправьте или введите ваш номер телефона: +375 ** *** ****",
+            reply_markup=utils.get_phone_kb())
     return PHONE
 
 
 def user_phone_handler(update, context):
     try:
-        text = update.message.text
-        phone_res = re.match("(^(8|\+3|37)\d+(?:[ ]\d+)*)", text)
-        if phone_res:
-            phone = phone_res.group()
-            user = update.message.from_user
-            db.update_user(user['id'], 'phone', phone)
-            name = db.get_user(user['id']).first_name
-
-            update.message.reply_text(
-                f"🎂 {name}, когда Вас поздравить с днем рождения?\n"
-                f"Введите в формате дд.мм.гггг:",
-                reply_markup=utils.get_skip_kb()
-            )
-            return BIRTHDAY
+        user = update.message.from_user
+        if update.message.contact:
+            phone = update.message.contact.phone_number
         else:
-            update.message.reply_text(
-                f"Отправьте или введите ваш номер телефона: +375 ** *** ****"
-            )
-            return PHONE
+            text = update.message.text
+            phone_res = re.match("(^(8|\+3|37)\d+(?:[ ]\d+)*)", text)
+            if phone_res:
+                phone = phone_res.group()
+            else:
+                update.message.reply_text(
+                    f"Отправьте или введите ваш номер телефона: +375 ** *** ****"
+                )
+                return PHONE
+        db.update_user(user['id'], 'phone', phone)
+        name = db.get_user(user['id']).first_name
+
+        update.message.reply_text(
+            f"🎂 {name}, когда Вас поздравить с днем рождения?\n"
+            f"Введите в формате дд.мм.гггг:",
+            reply_markup=utils.get_skip_kb()
+        )
+        return BIRTHDAY
 
     except Exception as ex:
         logger.warning(ex)
@@ -172,7 +176,8 @@ def select_category(update, context):
             update.message.reply_text(
                 f'{update.message.text}\n\n'
                 f'*Выберите блюдо*',
-                reply_markup=utils.get_products_kb(user_data['category'])
+                reply_markup=utils.get_products_kb(user_data['category']),
+                parse_mode=ParseMode.MARKDOWN
             )
             return CHOOSING_PRODUCT
 
@@ -503,7 +508,8 @@ def main():
                     Filters.text, start)
                 ],
             NAME: [MessageHandler(Filters.text, user_name_handler)],
-            PHONE: [MessageHandler(Filters.text, user_phone_handler)],
+            PHONE: [MessageHandler(
+                Filters.text | Filters.contact, user_phone_handler)],
             BIRTHDAY: [
                 MessageHandler(
                     Filters.regex(config.text['skip']), start),
