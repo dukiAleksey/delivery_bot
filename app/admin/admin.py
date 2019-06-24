@@ -3,6 +3,7 @@
 import csv
 import os
 import os.path as op
+import json
 
 from datetime import date
 from datetime import datetime
@@ -24,6 +25,9 @@ from flask_admin.contrib.sqla.form import InlineModelConverter
 from flask_admin.contrib.sqla.fields import InlineModelFormList
 from flask_admin.contrib.sqla.filters import BaseSQLAFilter, FilterEqual
 
+from flask_migrate import Migrate, MigrateCommand
+from flask_script import Manager
+
 from flask_security import Security, SQLAlchemyUserDatastore, \
     UserMixin, RoleMixin, login_required, current_user
 from flask_security.forms import LoginForm, RegisterForm, StringField, Required
@@ -34,6 +38,10 @@ from flask_security.utils import encrypt_password
 app = Flask(__name__, static_folder='uploads')
 app.config.from_pyfile('config.py')
 db = SQLAlchemy(app)
+
+migrate = Migrate(app, db)
+manager = Manager(app)
+manager.add_command('db', MigrateCommand)
 
 # Create directory for file fields to use
 file_path = op.join(op.dirname(__file__), 'uploads')
@@ -160,6 +168,9 @@ class UserAdmin(sqla.ModelView):
         'orders'
     ]
     column_default_sort = [('last_name', False), ('first_name', False)]  # sort on multiple columns
+    can_export = True
+    export_max_rows = 1000
+    export_types = ['csv', 'xls']
 
     # setup create & edit forms so that only 'available' pets can be selected
     def create_form(self):
@@ -598,4 +609,4 @@ if __name__ == '__main__':
         add_products(product_list)
 
     # Start app
-    app.run(port=5001)
+    app.run(debug=True, port=5001)

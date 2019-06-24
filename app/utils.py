@@ -1,5 +1,8 @@
 from admin import admin as db
+
 import config
+import datetime as dt
+import json
 
 from telegram import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, ParseMode
 
@@ -361,6 +364,16 @@ def get_image_path(filename):
     data_folder = Path('uploads')
     file_to_open = data_folder / filename
     return str(file_to_open.resolve())
+
+
+def is_working_hours():
+    work_day = dt.datetime.today().strftime('%a')
+    start = dt.time(
+        *[int(s) for s in config.work_time[work_day]['open'].split(':')])
+    end = dt.time(
+        *[int(s) for s in config.work_time[work_day]['close'].split(':')])
+    now = dt.datetime.now().time()
+    return start <= now <= end
 
 
 def is_admin(user_id):

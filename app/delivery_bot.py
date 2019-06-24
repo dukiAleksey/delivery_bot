@@ -248,11 +248,18 @@ def clear_cart_handler(update, context):
 
 
 def order_handler(update, context):
-    update.message.reply_text(
-        config.text['select_order_type'],
-        reply_markup=utils.get_order_type_kb()
-    )
-    return ORDERING
+    if utils.is_working_hours():
+        update.message.reply_text(
+            config.text['select_order_type'],
+            reply_markup=utils.get_order_type_kb()
+        )
+        return ORDERING
+    else:
+        update.message.reply_text(
+            config.text['working_time'],
+            reply_markup=utils.get_start_kb()
+        )
+        return CHOOSING_CATEGORY
 
 
 def delivery_handler(update, context):
@@ -301,9 +308,10 @@ def location_handler(update, context):
 
 def cancel_order_handler(update, context):
     update.message.reply_text(
-        'cancel_order_handler'
+        config.text['cancel_order_response'],
+        reply_markup=utils.get_start_kb()
     )
-    return INITIAL
+    return CHOOSING_CATEGORY
 
 
 def submit_order_handler(update, context):

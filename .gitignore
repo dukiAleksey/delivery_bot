@@ -1,8 +1,10 @@
 config*
 .vscode
 .pytest_cache
+
 __pycache__
 # uploads
 !app/admin/uploads/
 *.log
 *conversation*
+migrations/
