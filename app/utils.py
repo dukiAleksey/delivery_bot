@@ -60,6 +60,10 @@ def get_skip_kb():
     return ReplyKeyboardMarkup(get_skip_keyboard())
 
 
+def get_settings_kb():
+    return ReplyKeyboardMarkup(get_settings_keyboard())
+
+
 # ==============================  Keyboards ==============================
 # ===============================  Helpers ===============================
 
@@ -68,6 +72,7 @@ def get_main_keyboard():
     categories = db.get_categories()
     cats_buttons = list(group(categories))
     cats_buttons.append([config.text['cart']])
+    cats_buttons.append([config.text['btn_settings']])
     return cats_buttons
 
 
@@ -136,6 +141,16 @@ def get_phone_keyboard():
     phone_kb = [
         [KeyboardButton(config.text['my_phone'], request_contact=True)]]
     return phone_kb
+
+
+def get_settings_keyboard():
+    settings_kb = [
+        [config.text['btn_change_phone']],
+        [config.text['btn_change_name']],
+        # [config.text['btn_change_birth']]
+        [config.text['btn_back']]
+        ]
+    return settings_kb
 
 
 def group(lst, n=2):

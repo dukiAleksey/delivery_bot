@@ -28,7 +28,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-INITIAL, NAME, PHONE, BIRTHDAY, CHOOSING_CATEGORY, CHOOSING_SUBCATEGORY, CHOOSING_PRODUCT, TYPING_QUONTITY, EDITING_CART, ORDERING, CHOOSING_PAYMENT = range(11)
+INITIAL, NAME, PHONE, BIRTHDAY, CHOOSING_CATEGORY, CHOOSING_SUBCATEGORY, CHOOSING_PRODUCT, TYPING_QUONTITY, EDITING_CART, ORDERING, CHOOSING_PAYMENT, SETTINGS, SETTINGS_ENTERING_PHONE, SETTINGS_ENTERING_NAME = range(14)
 
 
 class MQBot(telegram.bot.Bot):
@@ -96,6 +96,14 @@ def cart_handler(update, context):
     return EDITING_CART
 
 
+def settings_handler(update, context):
+    update.message.reply_text(
+        config.text['title_settings'],
+        reply_markup=utils.get_settings_kb()
+    )
+    return SETTINGS
+
+
 def user_name_handler(update, context):
     name = update.message.text
     user = update.message.from_user
@@ -108,6 +116,25 @@ def user_name_handler(update, context):
     return PHONE
 
 
+def update_user_name_handler(update, context):
+    update.message.reply_text(
+            f"Укажите имя (в формате ФИО)"
+        )
+    return SETTINGS_ENTERING_NAME
+
+
+def update_user_name_validator(update, context):
+    name = update.message.text
+    user = update.message.from_user
+    utils.validate_name(name)
+    db.update_user(user['id'], 'first_name', name)
+    update.message.reply_text(
+            config.text['title_settings'],
+            reply_markup=utils.get_settings_kb()
+        )
+    return SETTINGS
+
+
 def user_phone_handler(update, context):
     try:
         user = update.message.from_user
@@ -115,12 +142,13 @@ def user_phone_handler(update, context):
             phone = update.message.contact.phone_number
         else:
             text = update.message.text
-            phone_res = re.match("(^(8|\+3|37)\d+(?:[ ]\d+)*)", text)
+            phone_res = re.match("^(8|\+3|37)\d{10,}(?:[ ]\d+)*$", text)
             if phone_res:
                 phone = phone_res.group()
             else:
                 update.message.reply_text(
-                    f"Отправьте или введите ваш номер телефона: +375 ** *** ****"
+                    f'{config.text["enter_phone"]}',
+                    reply_markup=utils.get_phone_kb()
                 )
                 return PHONE
         db.update_user(user['id'], 'phone', phone)
@@ -131,7 +159,47 @@ def user_phone_handler(update, context):
             f"Введите в формате дд.мм.гггг:",
             reply_markup=utils.get_skip_kb()
         )
+        if update.message.text == config.text['btn_change_phone']:
+            return CHOOSING_CATEGORY
+
         return BIRTHDAY
+
+    except Exception as ex:
+        logger.warning(ex)
+
+
+def update_user_phone_handler(update, context):
+    update.message.reply_text(
+        f'{config.text["enter_phone"]}',
+        reply_markup=utils.get_phone_kb()
+    )
+    return SETTINGS_ENTERING_PHONE
+
+
+def update_user_phone_validator(update, context):
+    try:
+        user = update.message.from_user
+        if update.message.contact:
+            phone = update.message.contact.phone_number
+        else:
+            text = update.message.text
+            phone_res = re.match("^(8|\+3|37)\d{10,}(?:[ ]\d+)*$", text)
+            if phone_res:
+                phone = phone_res.group()
+            else:
+                update.message.reply_text(
+                    f'{config.text["enter_phone"]}',
+                    reply_markup=utils.get_phone_kb()
+                )
+                return SETTINGS_ENTERING_PHONE
+        db.update_user(user['id'], 'phone', phone)
+        name = db.get_user(user['id']).first_name
+
+        update.message.reply_text(
+            config.text['title_settings'],
+            reply_markup=utils.get_settings_kb()
+        )
+        return SETTINGS
 
     except Exception as ex:
         logger.warning(ex)
@@ -167,7 +235,7 @@ def select_category(update, context):
     try:
         if utils.has_subcategory(user_data['category']):
             update.message.reply_text(
-                f'*Выберите порцию*',
+                config.text['select_product'],
                 reply_markup=utils.get_categories_kb(user_data['category']),
                 parse_mode=ParseMode.MARKDOWN
             )
@@ -175,7 +243,7 @@ def select_category(update, context):
         else:
             update.message.reply_text(
                 f'{update.message.text}\n\n'
-                f'*Выберите блюдо*',
+                f'{config.text["select_category"]}',
                 reply_markup=utils.get_products_kb(user_data['category']),
                 parse_mode=ParseMode.MARKDOWN
             )
@@ -462,6 +530,25 @@ def get_report_handler(update, context):
             pass
 
 
+def reply_handler(update, context):
+    if utils.is_admin(update.message.chat_id):
+        logger.info(f'reply_handler -> text: {update.message.text}')
+        s = update.message.text
+        user_id = context.args[0]
+        try:
+            logger.info(f'reply_handler -> {user_id}')
+            context.bot.send_message(
+                chat_id=user_id,
+                text=update.message.text_markdown.replace(f'/reply {user_id}\n', ''),
+                parse_mode=ParseMode.MARKDOWN,
+                disable_web_page_preview=True
+            )
+        except Exception as ex:
+            logger.warning(f'{ex}')
+            logger.warning(f'reply_all_handler -> {ex}')
+            pass
+
+
 def reply_all_handler(update, context):
     if utils.is_admin(update.message.chat_id):
         logger.info(f'reply_all_handler -> text: {update.message.text}')
@@ -513,6 +600,8 @@ def main():
                 MessageHandler(
                     Filters.regex(config.text['cart']), cart_handler),
                 MessageHandler(
+                    Filters.regex(config.text['btn_settings']), settings_handler),
+                MessageHandler(
                     Filters.text, start)
                 ],
             NAME: [MessageHandler(Filters.text, user_name_handler)],
@@ -529,6 +618,8 @@ def main():
                     Filters.regex(config.text['back']), start),
                 MessageHandler(
                     Filters.regex(config.text['cart']), cart_handler),
+                MessageHandler(
+                    Filters.regex(config.text['btn_settings']), settings_handler),
                 MessageHandler(
                     Filters.text, select_category)
                 ],
@@ -583,6 +674,31 @@ def main():
                 MessageHandler(
                     Filters.text | Filters.location, location_handler)
             ],
+            SETTINGS: [
+                MessageHandler(
+                    Filters.regex(config.text['btn_change_phone']),
+                    update_user_phone_handler),
+                MessageHandler(
+                    Filters.regex(config.text['btn_change_name']),
+                    update_user_name_handler),
+                MessageHandler(
+                    Filters.regex(config.text['btn_change_birth']),
+                    user_birthday_handler),
+                MessageHandler(
+                    Filters.regex(config.text['btn_back']),
+                    start
+                )
+            ],
+            SETTINGS_ENTERING_PHONE: [
+                MessageHandler(
+                    Filters.text | Filters.contact, update_user_phone_validator
+                )
+            ],
+            SETTINGS_ENTERING_NAME: [
+                MessageHandler(
+                    Filters.text, update_user_name_validator
+                )
+            ],
             ConversationHandler.TIMEOUT: [
                 MessageHandler(
                     Filters.text, done, pass_user_data=True)
@@ -632,6 +748,7 @@ def main():
     dp.add_handler(CommandHandler('getreport', get_report_handler))
     dp.add_handler(CommandHandler(
         'r', restart, filters=Filters.user(config.admins)))
+    dp.add_handler(CommandHandler('reply', reply_handler))
     dp.add_handler(CommandHandler('replyall', reply_all_handler))
 
     # log all errors
