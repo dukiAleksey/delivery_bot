@@ -14,6 +14,7 @@ from telegram.ext import (Updater, CommandHandler, MessageHandler,
                           CallbackQueryHandler, Filters,
                           RegexHandler, ConversationHandler, PicklePersistence)
 from telegram.ext import messagequeue as mq
+from telegram.utils.request import Request
 from threading import Thread
 
 import config
@@ -582,7 +583,7 @@ def error(update, context):
 def main():
     q = mq.MessageQueue(all_burst_limit=29, all_time_limit_ms=1017)
     # set connection pool size for bot
-    delivery_bot = MQBot(config.BOT_TOKEN, mqueue=q)
+    delivery_bot = MQBot(config.BOT_TOKEN, request=Request(con_pool_size=8), mqueue=q)
     persistence = PicklePersistence(filename='conversation')
     updater = Updater(
         bot=delivery_bot,
@@ -598,15 +599,20 @@ def main():
         states={
             INITIAL: [
                 MessageHandler(
-                    Filters.regex(config.text['cart']), cart_handler),
+                    Filters.regex(config.text['cart']),
+                    cart_handler),
                 MessageHandler(
-                    Filters.regex(config.text['btn_settings']), settings_handler),
+                    Filters.regex(config.text['btn_settings']),
+                    settings_handler),
                 MessageHandler(
                     Filters.text, start)
                 ],
-            NAME: [MessageHandler(Filters.text, user_name_handler)],
+            NAME: [MessageHandler(
+                Filters.text,
+                user_name_handler)],
             PHONE: [MessageHandler(
-                Filters.text | Filters.contact, user_phone_handler)],
+                Filters.text | Filters.contact,
+                user_phone_handler)],
             BIRTHDAY: [
                 MessageHandler(
                     Filters.regex(config.text['skip']), start),
@@ -619,7 +625,8 @@ def main():
                 MessageHandler(
                     Filters.regex(config.text['cart']), cart_handler),
                 MessageHandler(
-                    Filters.regex(config.text['btn_settings']), settings_handler),
+                    Filters.regex(config.text['btn_settings']),
+                    settings_handler),
                 MessageHandler(
                     Filters.text, select_category)
                 ],
@@ -691,13 +698,13 @@ def main():
             ],
             SETTINGS_ENTERING_PHONE: [
                 MessageHandler(
-                    Filters.text | Filters.contact, update_user_phone_validator
-                )
+                    Filters.text | Filters.contact,
+                    update_user_phone_validator)
             ],
             SETTINGS_ENTERING_NAME: [
                 MessageHandler(
-                    Filters.text, update_user_name_validator
-                )
+                    Filters.text,
+                    update_user_name_validator)
             ],
             ConversationHandler.TIMEOUT: [
                 MessageHandler(
