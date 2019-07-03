@@ -583,7 +583,8 @@ def error(update, context):
 def main():
     q = mq.MessageQueue(all_burst_limit=29, all_time_limit_ms=1017)
     # set connection pool size for bot
-    delivery_bot = MQBot(config.BOT_TOKEN, request=Request(con_pool_size=8), mqueue=q)
+    request = Request(con_pool_size=8)
+    delivery_bot = MQBot(config.BOT_TOKEN, request=request, mqueue=q)
     persistence = PicklePersistence(filename='conversation')
     updater = Updater(
         bot=delivery_bot,

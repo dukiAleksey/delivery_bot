@@ -3,7 +3,6 @@
 import csv
 import os
 import os.path as op
-import json
 
 from datetime import date
 from datetime import datetime
@@ -27,7 +26,6 @@ from flask_admin.contrib.sqla.filters import BaseSQLAFilter, FilterEqual
 
 from flask_migrate import Migrate, MigrateCommand
 from flask_script import Manager
-
 from flask_security import Security, SQLAlchemyUserDatastore, \
     UserMixin, RoleMixin, login_required, current_user
 from flask_security.forms import LoginForm, RegisterForm, StringField, Required
