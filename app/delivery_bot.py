@@ -503,7 +503,8 @@ def get_db_handler(update, context):
     logger.info(f'get_db_handler -> {chat_id}')
     if utils.is_admin(chat_id):
         try:
-            f = open('db.sqlite', 'rb')
+            f_path = os.path.join(os.path.dirname(__file__), 'admin/db.sqlite')
+            f = open(f_path, 'rb')
             bot.send_document(
                 chat_id=chat_id,
                 document=f
