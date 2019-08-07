@@ -4,15 +4,14 @@ import logging
 import re
 import utils
 import os
-import pickle
 import telegram.bot
 import sys
 
 from datetime import datetime
-from telegram import ReplyKeyboardMarkup, ParseMode, InlineKeyboardMarkup
+from telegram import ParseMode, InlineKeyboardMarkup
 from telegram.ext import (Updater, CommandHandler, MessageHandler,
                           CallbackQueryHandler, Filters,
-                          RegexHandler, ConversationHandler, PicklePersistence)
+                          ConversationHandler, PicklePersistence)
 from telegram.ext import messagequeue as mq
 from telegram.utils.request import Request
 from threading import Thread
@@ -29,7 +28,10 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-INITIAL, NAME, PHONE, BIRTHDAY, CHOOSING_CATEGORY, CHOOSING_SUBCATEGORY, CHOOSING_PRODUCT, TYPING_QUONTITY, EDITING_CART, ORDERING, CHOOSING_PAYMENT, SETTINGS, SETTINGS_ENTERING_PHONE, SETTINGS_ENTERING_NAME = range(14)
+INITIAL, NAME, PHONE, BIRTHDAY, CHOOSING_CATEGORY, \
+    CHOOSING_SUBCATEGORY, CHOOSING_PRODUCT, TYPING_QUONTITY, \
+    EDITING_CART, ORDERING, CHOOSING_PAYMENT, SETTINGS, \
+    SETTINGS_ENTERING_PHONE, SETTINGS_ENTERING_NAME = range(14)
 
 
 class MQBot(telegram.bot.Bot):
@@ -43,7 +45,7 @@ class MQBot(telegram.bot.Bot):
     def __del__(self):
         try:
             self._msg_queue.stop()
-        except:
+        except Exception:
             pass
         super(MQBot, self).__del__()
 
@@ -65,11 +67,9 @@ def start(update, context):
         logger.info(f'start New User: {chat_id}')
         db.add_user(user)
         update.message.reply_text(
-            f"Добрый день!\n"
-            f"Добро пожаловать в виртуальный помощник службы доставки еды")
+            config.text['initial'])
         update.message.reply_text(
-            f"Давайте пройдем быструю регистрацию.\n"
-            f"Как Вас зовут? (в формате ФИО)"
+            config.text['initial_next']
         )
         return NAME
     else:
@@ -111,15 +111,14 @@ def user_name_handler(update, context):
     utils.validate_name(name)
     db.update_user(user['id'], 'first_name', name)
     update.message.reply_text(
-            f"Какой у Вас номер {name}?\n"
-            f"Отправьте или введите ваш номер телефона: +375 ** *** ****",
+            config.text['enter_phone'],
             reply_markup=utils.get_phone_kb())
     return PHONE
 
 
 def update_user_name_handler(update, context):
     update.message.reply_text(
-            f"Укажите имя (в формате ФИО)"
+            config.text['enter_name']
         )
     return SETTINGS_ENTERING_NAME
 
@@ -154,7 +153,6 @@ def user_phone_handler(update, context):
                 return PHONE
         db.update_user(user['id'], 'phone', phone)
         name = db.get_user(user['id']).first_name
-
         update.message.reply_text(
             f"🎂 {name}, когда Вас поздравить с днем рождения?\n"
             f"Введите в формате дд.мм.гггг:",
@@ -194,7 +192,6 @@ def update_user_phone_validator(update, context):
                 )
                 return SETTINGS_ENTERING_PHONE
         db.update_user(user['id'], 'phone', phone)
-        name = db.get_user(user['id']).first_name
 
         update.message.reply_text(
             config.text['title_settings'],
@@ -222,7 +219,7 @@ def user_birthday_handler(update, context):
     except Exception as ex:
         logger.warning(ex)
         update.message.reply_text(
-            'Введите в формате дд.мм.гггг:'
+            config.text['enter_date']
         )
         return BIRTHDAY
 
@@ -256,7 +253,8 @@ def select_category(update, context):
 
 def show_product(update, context):
     try:
-        product = db.get_product(update.message.text, context.user_data['category'])
+        product = db.get_product(
+            update.message.text, context.user_data['category'])
         context.user_data.update(
             product=product
             )
@@ -289,8 +287,8 @@ def add_to_cart_handler(update, context):
         logger.warning(ex)
 
     update.message.reply_text(
-            f'Добавлено в корзину\n',
-            reply_markup=utils.get_start_kb()
+        config.text['added_in_cart'],
+        reply_markup=utils.get_start_kb()
         )
     return CHOOSING_CATEGORY
 
@@ -421,7 +419,8 @@ def delivery_time_handler(update, context):
             reply_markup=InlineKeyboardMarkup(
                 utils.generate_time_suggest_reply_keyb(
                     chat_id,
-                    utils.get_delivery_time_from_callback(chat.callback_query.data)
+                    utils.get_delivery_time_from_callback(
+                        chat.callback_query.data)
                 )),
             parse_mode=ParseMode.MARKDOWN
         )
@@ -492,8 +491,8 @@ def get_logs_handler(update, context):
                 chat_id=chat_id,
                 document=f
             )
-        except Exception:
-            pass
+        except Exception as ex:
+            logger.warning(f'{ex}')
 
 
 def get_db_handler(update, context):
@@ -528,7 +527,8 @@ def get_report_handler(update, context):
                 chat_id=chat_id,
                 document=f
             )
-        except Exception:
+        except Exception as ex:
+            logger.warning(f'{ex}')
             pass
 
 
@@ -541,7 +541,8 @@ def reply_handler(update, context):
             logger.info(f'reply_handler -> {user_id}')
             context.bot.send_message(
                 chat_id=user_id,
-                text=update.message.text_markdown.replace(f'/reply {user_id}\n', ''),
+                text=update.message.text_markdown.replace(
+                    f'/reply {user_id}\n', ''),
                 parse_mode=ParseMode.MARKDOWN,
                 disable_web_page_preview=True
             )
@@ -560,7 +561,8 @@ def reply_all_handler(update, context):
                 logger.info(f'reply_all_handler -> {user}')
                 context.bot.send_message(
                     chat_id=user.user_id,
-                    text=update.message.text_markdown.replace(f'/replyall', ''),
+                    text=update.message.text_markdown.replace(
+                        f'/replyall', ''),
                     parse_mode=ParseMode.MARKDOWN,
                     disable_web_page_preview=True
                 )
@@ -571,8 +573,6 @@ def reply_all_handler(update, context):
 
 
 def done(update, context):
-    user_data = context.user_data
-
     return CHOOSING_CATEGORY
 
 
@@ -637,7 +637,8 @@ def main():
                     Filters.regex(config.text['back']), start),
                 MessageHandler(
                     Filters.text & (
-                        ~ Filters.regex(config.text['back']) | ~Filters.regex(config.text['cart'])),
+                        ~ Filters.regex(config.text['back']) |
+                        ~ Filters.regex(config.text['cart'])),
                     show_product)
                 ],
             TYPING_QUONTITY: [

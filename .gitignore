@@ -6,6 +6,9 @@ __pycache__
 # uploads
 !app/admin/uploads/
 *.log
+*.sqlite
 *conversation*
 migrations/
 env/
+uploads/
+
