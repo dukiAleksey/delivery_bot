@@ -31,10 +31,53 @@ from flask_security import Security, SQLAlchemyUserDatastore, \
 from flask_security.forms import LoginForm, RegisterForm, StringField, Required
 from flask_security.utils import encrypt_password
 
-
 # Create application
 app = Flask(__name__, static_folder='uploads')
 app.config.from_pyfile('config.py')
+
+# ---
+
+class PrefixMiddleware(object):
+
+    def __init__(self, app, prefix=''):
+        self.app = app
+        self.prefix = prefix
+
+    def __call__(self, environ, start_response):
+
+        environ['PATH_INFO'] = environ['PATH_INFO'][len(self.prefix):]
+        environ['SCRIPT_NAME'] = self.prefix
+        return self.app(environ, start_response)
+
+#app.wsgi_app = PrefixMiddleware(app.wsgi_app, prefix='/tutaka')
+
+
+# ---
+
+class ReverseProxied(object):
+    def __init__(self, app):
+        self.app = app
+
+    def __call__(self, environ, start_response):
+        script_name = environ.get('HTTP_X_SCRIPT_NAME', '')
+        if script_name:
+            server = environ.get('HTTP_X_FORWARDED_SERVER', '')
+            if server:
+                environ['HTTP_HOST'] = server
+            environ['SCRIPT_NAME'] = script_name
+            path_info = environ['PATH_INFO']
+            if path_info.startswith(script_name):
+                environ['PATH_INFO'] = path_info[len(script_name):]
+
+        scheme = environ.get('HTTP_X_SCHEME', '')
+        if scheme:
+            environ['wsgi.url_scheme'] = scheme
+        return self.app(environ, start_response)
+
+#app.wsgi_app = ReverseProxied(app.wsgi_app)
+
+# ---
+
 db = SQLAlchemy(app)
 
 migrate = Migrate(app, db)
