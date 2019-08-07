@@ -3,10 +3,11 @@
 import csv
 import os
 import os.path as op
+import logging
+from logging.handlers import RotatingFileHandler
 
-from datetime import date
 from datetime import datetime
-from sqlalchemy import create_engine, func, or_, and_
+from sqlalchemy import func, or_, and_
 from sqlalchemy.event import listens_for
 from jinja2 import Markup
 
@@ -17,18 +18,12 @@ import flask_admin as admin
 
 from flask_admin import form
 from flask_admin import helpers as admin_helpers
-from flask_admin.base import MenuLink
 from flask_admin.contrib import sqla
-from flask_admin.contrib.sqla import filters
-from flask_admin.contrib.sqla.form import InlineModelConverter
-from flask_admin.contrib.sqla.fields import InlineModelFormList
-from flask_admin.contrib.sqla.filters import BaseSQLAFilter, FilterEqual
 
 from flask_migrate import Migrate, MigrateCommand
 from flask_script import Manager
 from flask_security import Security, SQLAlchemyUserDatastore, \
-    UserMixin, RoleMixin, login_required, current_user
-from flask_security.forms import LoginForm, RegisterForm, StringField, Required
+    UserMixin, RoleMixin, current_user
 from flask_security.utils import encrypt_password
 
 
@@ -37,18 +32,26 @@ app = Flask(__name__, static_folder='uploads')
 app.config.from_pyfile('config.py')
 db = SQLAlchemy(app)
 
+#  logging
+logger = logging.getLogger('flask_admin')
+logger.setLevel(logging.INFO)
+flask_admin_logs_handler = RotatingFileHandler(
+    'flask_admin.log', maxBytes=2000, backupCount=10)
+logger.addHandler(flask_admin_logs_handler)
+
+#  Migration
 migrate = Migrate(app, db)
 manager = Manager(app)
 manager.add_command('db', MigrateCommand)
 
-# Create directory for file fields to use
+#  Create directory for file fields to use
 file_path = op.join(op.dirname(__file__), 'uploads')
 try:
     os.mkdir(file_path)
 except OSError:
     pass
 
-# Define models
+#  Define models
 roles_users = db.Table(
     'roles_users',
     db.Column('user_id', db.Integer(), db.ForeignKey('users.id')),
@@ -317,18 +320,6 @@ def security_context_processor():
 # ============================  Usage =============================
 
 # Source https://github.com/pybites/pytip/tree/master/tips
-
-
-def _create_session():
-    db_url = 'sqlite:///db.sqlite'
-
-    engine = create_engine(
-        db_url,
-        connect_args={'check_same_thread': False},
-        echo=False)
-    Base.metadata.create_all(engine)
-    create_session = sessionmaker(bind=engine)
-    return create_session()
 
 
 def export_orders_to_file():
@@ -607,4 +598,4 @@ if __name__ == '__main__':
         add_products(product_list)
 
     # Start app
-    app.run(debug=True, port=5001)
+    app.run(port=5001)
