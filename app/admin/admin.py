@@ -30,49 +30,6 @@ from flask_security.utils import encrypt_password
 app = Flask(__name__, static_folder='uploads')
 app.config.from_pyfile('config.py')
 
-# ---
-
-class PrefixMiddleware(object):
-
-    def __init__(self, app, prefix=''):
-        self.app = app
-        self.prefix = prefix
-
-    def __call__(self, environ, start_response):
-
-        environ['PATH_INFO'] = environ['PATH_INFO'][len(self.prefix):]
-        environ['SCRIPT_NAME'] = self.prefix
-        return self.app(environ, start_response)
-
-#app.wsgi_app = PrefixMiddleware(app.wsgi_app, prefix='/tutaka')
-
-
-# ---
-
-class ReverseProxied(object):
-    def __init__(self, app):
-        self.app = app
-
-    def __call__(self, environ, start_response):
-        script_name = environ.get('HTTP_X_SCRIPT_NAME', '')
-        if script_name:
-            server = environ.get('HTTP_X_FORWARDED_SERVER', '')
-            if server:
-                environ['HTTP_HOST'] = server
-            environ['SCRIPT_NAME'] = script_name
-            path_info = environ['PATH_INFO']
-            if path_info.startswith(script_name):
-                environ['PATH_INFO'] = path_info[len(script_name):]
-
-        scheme = environ.get('HTTP_X_SCHEME', '')
-        if scheme:
-            environ['wsgi.url_scheme'] = scheme
-        return self.app(environ, start_response)
-
-#app.wsgi_app = ReverseProxied(app.wsgi_app)
-
-# ---
-
 db = SQLAlchemy(app)
 
 #  logging
@@ -81,6 +38,13 @@ logger.setLevel(logging.INFO)
 flask_admin_logs_handler = RotatingFileHandler(
     'flask_admin.log', maxBytes=2000, backupCount=10)
 logger.addHandler(flask_admin_logs_handler)
+
+#  gunicorn logging
+#  gunicorn --workers=0 --bind=0.0.0.0:8000 --log-level=warning app:app
+if __name__ != '__main__':
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)
 
 #  Migration
 migrate = Migrate(app, db)

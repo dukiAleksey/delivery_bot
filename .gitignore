@@ -1,13 +1,13 @@
 config*
 .vscode
 .pytest_cache
-
 __pycache__
 # uploads
 !app/admin/uploads/
 *.log
 *.sqlite
-*conversation*
+orders.csv
+conversation
 migrations/
 env/
 uploads/

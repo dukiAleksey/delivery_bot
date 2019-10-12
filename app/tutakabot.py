@@ -82,11 +82,14 @@ def start(update, context):
 
 
 def cart_handler(update, context):
+    chat = utils.get_chat(context, update)
+    chat_id = chat.effective_chat.id
 
     if 'cart' not in context.user_data:
         update.message.reply_text(
             config.text['empty_card']
         )
+        logger.info(f'cart_handler: empty_card {chat_id}')
         return start(update, context)
     else:
         update.message.reply_text(
@@ -94,6 +97,7 @@ def cart_handler(update, context):
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=utils.get_cart_kb(context.user_data['cart'])
         )
+        logger.info(f'card_handler: show cart items to user {chat_id}')
     return EDITING_CART
 
 
@@ -102,6 +106,7 @@ def settings_handler(update, context):
         config.text['title_settings'],
         reply_markup=utils.get_settings_kb()
     )
+    logger.info(f'settings_handler: {update.effective_chat.id}')
     return SETTINGS
 
 
@@ -113,6 +118,7 @@ def user_name_handler(update, context):
     update.message.reply_text(
             config.text['enter_phone'],
             reply_markup=utils.get_phone_kb())
+    logger.info(f'user_name_handler:')
     return PHONE
 
 
@@ -120,6 +126,7 @@ def update_user_name_handler(update, context):
     update.message.reply_text(
             config.text['enter_name']
         )
+    logger.info(f'update_user_name_handler: {update.effective_chat.id}')
     return SETTINGS_ENTERING_NAME
 
 
