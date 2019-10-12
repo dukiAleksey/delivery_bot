@@ -21,7 +21,7 @@ from admin import admin as db
 
 # Enable logging
 logging.basicConfig(
-    filename='delivery_bot.log',
+    filename='bot.log',
     filemode='a+',
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO)
