@@ -599,7 +599,7 @@ def main():
         persistence=persistence,
         use_context=True,
         request_kwargs={
-            'proxy_url': 'socks5://127.0.0.1:1080/'
+            'proxy_url': 'socks5://176.120.28.229:1080/'
         })
 
     dp = updater.dispatcher
