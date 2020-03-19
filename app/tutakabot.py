@@ -598,12 +598,7 @@ def main():
         bot=delivery_bot,
         persistence=persistence,
         use_context=True,
-        request_kwargs={
-            'proxy_url': 'socks5h://api.tg.mediatube.xyz:433',
-            'urllib3_proxy_kwargs': {
-                'username': 'socksuser',
-                'password': '8X5tjtV5ISNv2'}})
-
+        request_kwargs={'read_timeout': 10, 'connect_timeout': 10})
 
     dp = updater.dispatcher
 
