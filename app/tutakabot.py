@@ -594,12 +594,13 @@ def main():
     request = Request(con_pool_size=8)
     delivery_bot = MQBot(config.BOT_TOKEN, request=request, mqueue=q)
     persistence = PicklePersistence(filename='conversation')
-    pp = telegram.utils.request.Request(proxy_url='socks5://127.0.0.1:1080')
     updater = Updater(
         bot=delivery_bot,
         persistence=persistence,
         use_context=True,
-        request_kwargs=pp)
+        request_kwargs={
+            'proxy_url': 'socks5://127.0.0.1:1080/'
+        })
 
     dp = updater.dispatcher
 
