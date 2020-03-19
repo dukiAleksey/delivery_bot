@@ -599,8 +599,11 @@ def main():
         persistence=persistence,
         use_context=True,
         request_kwargs={
-            'proxy_url': 'socks5h://163.172.152.192:1080'
-        })
+            'proxy_url': 'socks5h://api.tg.mediatube.xyz:433',
+            'urllib3_proxy_kwargs': {
+                'username': 'socksuser',
+                'password': '8X5tjtV5ISNv2'}})
+
 
     dp = updater.dispatcher
 
