@@ -47,7 +47,6 @@ class MQBot(telegram.bot.Bot):
             self._msg_queue.stop()
         except Exception:
             pass
-        super(MQBot, self).__del__()
 
     @mq.queuedmessage
     def send_message(self, *args, **kwargs):
@@ -589,16 +588,20 @@ def error(update, context):
 
 
 def main():
-    q = mq.MessageQueue(all_burst_limit=29, all_time_limit_ms=1017)
-    # set connection pool size for bot
+    # for test purposes limit global throughput to 3 messages per 3 seconds
+    q = mq.MessageQueue(all_burst_limit=3, all_time_limit_ms=3000)
+    # set connection pool size for bot 
     request = Request(con_pool_size=8)
     delivery_bot = MQBot(config.BOT_TOKEN, request=request, mqueue=q)
     persistence = PicklePersistence(filename='conversation')
-    updater = Updater(
-        bot=delivery_bot,
-        persistence=persistence,
-        use_context=True,
-        request_kwargs={'read_timeout': 10, 'connect_timeout': 10})
+
+    # https://t.me/pythontelegrambotgroup/232687
+    upd = telegram.ext.updater.Updater(bot=delivery_bot)
+    # updater = Updater(
+    #     bot=delivery_bot,
+    #     persistence=persistence,
+    #     use_context=True,
+    #     request_kwargs=pp)
 
     dp = updater.dispatcher
 
