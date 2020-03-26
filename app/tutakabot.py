@@ -596,7 +596,7 @@ def main():
     persistence = PicklePersistence(filename='conversation')
 
     # https://t.me/pythontelegrambotgroup/232687
-    upd = telegram.ext.updater.Updater(bot=delivery_bot)
+    updater = telegram.ext.updater.Updater(bot=delivery_bot)
     # updater = Updater(
     #     bot=delivery_bot,
     #     persistence=persistence,
