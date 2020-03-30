@@ -588,31 +588,15 @@ def error(update, context):
 
 
 def main():
-    # for test purposes limit global throughput to 3 messages per 3 seconds
-    q = mq.MessageQueue(all_burst_limit=3, all_time_limit_ms=3000)
+    q = mq.MessageQueue(all_burst_limit=29, all_time_limit_ms=1017)
     # set connection pool size for bot
-    request = Request(
-        con_pool_size=8,
-        connect_timeout=20,
-        read_timeout=20,
-        proxy_url='socks5h://api.tg.mediatube.xyz:433',
-        urllib3_proxy_kwargs={
-                'username': 'socksuser',
-                'password': '8X5tjtV5ISNv2'}
-        )
+    request = Request(con_pool_size=8)
     delivery_bot = MQBot(config.BOT_TOKEN, request=request, mqueue=q)
     persistence = PicklePersistence(filename='conversation')
-
-    # https://t.me/pythontelegrambotgroup/232687
-    updater = telegram.ext.updater.Updater(
+    updater = Updater(
         bot=delivery_bot,
         persistence=persistence,
         use_context=True)
-    # updater = Updater(
-    #     bot=delivery_bot,
-    #     persistence=persistence,
-    #     use_context=True,
-    #     request_kwargs=pp)
 
     dp = updater.dispatcher
 
