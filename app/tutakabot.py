@@ -62,20 +62,23 @@ def start(update, context):
 
     logger.info(f'start -> {chat_id}')
 
-    if utils.is_new_user(user.id):
-        logger.info(f'start New User: {chat_id}')
-        db.add_user(user)
-        update.message.reply_text(
-            config.text['initial'])
-        update.message.reply_text(
-            config.text['initial_next']
-        )
-        return NAME
-    else:
-        update.message.reply_text(
-            config.text['select_menu'],
-            reply_markup=utils.get_start_kb()
+    try:
+        if utils.is_new_user(user.id):
+            logger.info(f'start New User: {chat_id}')
+            db.add_user(user)
+            update.message.reply_text(
+                config.text['initial'])
+            update.message.reply_text(
+                config.text['initial_next']
             )
+            return NAME
+        else:
+            update.message.reply_text(
+                config.text['select_menu'],
+                reply_markup=utils.get_start_kb()
+                )
+    except Exception as ex:
+        logger.warning(ex, exc_info=True)
 
     return CHOOSING_CATEGORY
 
