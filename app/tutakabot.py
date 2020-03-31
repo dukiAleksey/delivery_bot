@@ -744,8 +744,7 @@ def main():
             ],
         name="my_conversation",
         persistent=True,
-        allow_reentry=True,
-        per_message=True
+        allow_reentry=True
     )
 
     def stop_and_restart():

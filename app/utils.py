@@ -256,7 +256,7 @@ def generate_cart_reply_text(data):
                      f'{config.text["currency"]}\n'
 
     try:
-        if data['delivery_type'] == config.text['delivery']:
+        if data.get('delivery_type', None) == config.text['delivery']:
             delivery_price = calculate_delivery_price(cart_price)
             cart_text += f'\n*Доставка* {delivery_price} {config.text["currency"]}\n'
     except KeyError:
