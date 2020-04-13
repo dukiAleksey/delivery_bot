@@ -175,7 +175,8 @@ class UserAdmin(sqla.ModelView):
         'date',
         'orders'
     ]
-    column_default_sort = [('last_name', False), ('first_name', False)]  # sort on multiple columns
+    # sort on multiple columns
+    column_default_sort = [('last_name', False), ('first_name', False)]
     can_export = True
     export_max_rows = 1000
     export_types = ['csv', 'xls']
@@ -221,7 +222,8 @@ class OrderAdmin(sqla.ModelView):
         'status'
     ]
     column_display_pk = True
-    column_default_sort = [('user_id', False), ('date', False)]  # sort on multiple columns
+    # sort on multiple columns
+    column_default_sort = [('user_id', False), ('date', False)]
     can_export = True
     export_max_rows = 1000
     export_types = ['csv', 'xls']
@@ -268,7 +270,8 @@ class ProductAdmin(sqla.ModelView):
     }
 
     # Alternative way to contribute field is to override it completely.
-    # In this case, Flask-Admin won't attempt to merge various parameters for the field.
+    # In this case, Flask-Admin won't attempt to merge various parameters
+    # for the field.
     form_extra_fields = {
         'img_path': form.ImageUploadField(
             'Image',
@@ -286,7 +289,8 @@ class RoleView(sqla.ModelView):
 
     def _handle_view(self, name, **kwargs):
         """
-        Override builtin _handle_view in order to redirect users when a view is not accessible.
+        Override builtin _handle_view in order to redirect users
+        when a view is not accessible.
         """
         if not self.is_accessible():
             if current_user.is_authenticated:
@@ -312,8 +316,8 @@ admin.add_view(ProductAdmin(Product, db.session))
 admin.add_view(RoleView(Role, db.session))
 
 
-# define a context processor for merging flask-admin's template context into the
-# flask-security views.
+# define a context processor for merging flask-admin's template context
+# into the flask-security views.
 @security.context_processor
 def security_context_processor():
     return dict(
